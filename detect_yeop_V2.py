@@ -32,19 +32,40 @@ import os
 import platform
 import sys
 from pathlib import Path
-# import Jetson.GPIO as GPIO
+
 import time
 
 import torch
 
+'''
+import Jetson.GPIO as GPIO
+GPIO.setmode(GPIO.BOARD)
+dirPin1=21
+stepPin1=22
+dirPin2=23
+stepPin2=24
+
+GPIO.setup(dirPin1,GPIO.OUT)
+GPIO.setup(stepPin1,GPIO.OUT)
+GPIO.setup(dirPin2,GPIO.OUT)
+GPIO.setup(stepPin2,GPIO.OUT)
+'''
+def move_step(dirPin,stepPin,distancee,dir):
+    GPIO.output(dirPin,dir)
+    print("Moving")
+    for I in range(distancee):
+        GPIO.output(stepPin,GPIO.HIGH)
+        time.sleep(0.01)
+        GPIO.output(stepPin,GPIO.LOW)
+        time.sleep(0.01)
+
+
 XY=(0,0)
+XY_center=(640,360)
+
+
 def Area(xyxy):
     return int(xyxy[2]-xyxy[0])*int(xyxy[3]-xyxy[1])
-
-def rotation(x,y,center_x,center_y):
-    print(11)
-    pass
-
 
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 FILE = Path(__file__).resolve()
@@ -97,7 +118,6 @@ def run(
     is_url = source.lower().startswith(('rtsp://', 'rtmp://', 'http://', 'https://'))
     webcam = source.isnumeric() or source.endswith('.txt') or (is_url and not is_file)
     screenshot = source.lower().startswith('screen')
-    CSI=(source=='1')
     if is_url and is_file:
         source = check_file(source)  # download
 
@@ -201,11 +221,10 @@ def run(
                         if area<Area(aa):
                             area=Area(aa)
                             XY=(int((aa[0]+aa[2])/2),int((aa[1]+aa[3])/2))
-                else:
+                elif len(temp)==1:
                     aa=temp[0]
                     XY=(int((xyxy[0]+xyxy[2])/2),int((xyxy[1]+xyxy[3])/2))
                 print(XY)
-        
 
             # Stream results
             im0 = annotator.result()
@@ -217,28 +236,46 @@ def run(
                 cv2.imshow(str(p), im0)
                 cv2.waitKey(1)  # 1 millisecond
 
-            # Save results (image with detections)
-            #### why it doesn't work?
-            if save_img:
-                if dataset.mode == 'image':
-                    cv2.imwrite(save_path, im0)
-                else:  # 'video' or 'stream'
-                    if vid_path[i] != save_path:  # new video
-                        vid_path[i] = save_path
-                        if isinstance(vid_writer[i], cv2.VideoWriter):
-                            vid_writer[i].release()  # release previous video writer
-                        if vid_cap:  # video
-                            fps = vid_cap.get(cv2.CAP_PROP_FPS)
-                            w = int(vid_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-                            h = int(vid_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-                        else:  # stream
-                            fps, w, h = 30, im0.shape[1], im0.shape[0]
-                        save_path = str(Path(save_path).with_suffix('.mp4'))  # force *.mp4 suffix on results videos
-                        vid_writer[i] = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (w, h))
-                    vid_writer[i].write(im0)
+            # # Save results (image with detections)
+            # if save_img:
+            #     if dataset.mode == 'image':
+            #         cv2.imwrite(save_path, im0)
+            #     else:  # 'video' or 'stream'
+            #         if vid_path[i] != save_path:  # new video
+            #             vid_path[i] = save_path
+            #             if isinstance(vid_writer[i], cv2.VideoWriter):
+            #                 vid_writer[i].release()  # release previous video writer
+            #             if vid_cap:  # video
+            #                 fps = vid_cap.get(cv2.CAP_PROP_FPS)
+            #                 w = int(vid_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            #                 h = int(vid_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            #             else:  # stream
+            #                 fps, w, h = 30, im0.shape[1], im0.shape[0]
+            #             save_path = str(Path(save_path).with_suffix('.mp4'))  # force *.mp4 suffix on results videos
+            #             vid_writer[i] = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (w, h))
+            #         vid_writer[i].write(im0)
+
+
+
+
+
 
         # Print time (inference-only)
         LOGGER.info(f"{s}{'' if len(det) else '(no detections), '}{dt[1].dt * 1E3:.1f}ms")
+        LOGGER.info(f"{XY}")
+
+        #move motor
+        target_position=(XY_center[0]-XY[0],XY_center[1]-XY[1])
+        if target_position[0]>20:
+            move_step(dir1,stepPin1,target_position[0],GPIO.HIGH)
+        elif target_position[0]<-20:
+            move_step(dir1,stepPin1,target_position[0],GPIO.LOW)
+
+        if target_position[1]>20:
+            move_step(dir2,stepPin2,target_position[1],GPIO.HIGH)
+        elif target_position[1]<-20:
+            move_step(dir2,stepPin2,target_position[2],GPIO.LOW)
+
 
     # Print results
     t = tuple(x.t / seen * 1E3 for x in dt)  # speeds per image
