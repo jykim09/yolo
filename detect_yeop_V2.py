@@ -37,7 +37,6 @@ import time
 
 import torch
 
-'''
 import Jetson.GPIO as GPIO
 GPIO.setmode(GPIO.BOARD)
 dirPin1=21
@@ -49,7 +48,8 @@ GPIO.setup(dirPin1,GPIO.OUT)
 GPIO.setup(stepPin1,GPIO.OUT)
 GPIO.setup(dirPin2,GPIO.OUT)
 GPIO.setup(stepPin2,GPIO.OUT)
-'''
+P_gain=1
+
 def move_step(dirPin,stepPin,distancee,dir):
     GPIO.output(dirPin,dir)
     print("Moving")
@@ -267,14 +267,14 @@ def run(
         #move motor
         target_position=(XY_center[0]-XY[0],XY_center[1]-XY[1])
         if target_position[0]>20:
-            move_step(dir1,stepPin1,target_position[0],GPIO.HIGH)
+            move_step(dir1,stepPin1,P_gain*target_position[0],GPIO.HIGH)
         elif target_position[0]<-20:
-            move_step(dir1,stepPin1,target_position[0],GPIO.LOW)
+            move_step(dir1,stepPin1,P_gain*target_position[0],GPIO.LOW)
 
         if target_position[1]>20:
-            move_step(dir2,stepPin2,target_position[1],GPIO.HIGH)
+            move_step(dir2,stepPin2,P_gain*target_position[1],GPIO.HIGH)
         elif target_position[1]<-20:
-            move_step(dir2,stepPin2,target_position[2],GPIO.LOW)
+            move_step(dir2,stepPin2,P_gain*target_position[2],GPIO.LOW)
 
 
     # Print results
