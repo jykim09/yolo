@@ -38,7 +38,7 @@ import time
 import torch
 
 def rotation(x,y,center_x,center_y):
-
+    print(11)
     pass
 
 
